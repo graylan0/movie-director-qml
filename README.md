@@ -43,6 +43,4 @@ The provided Python script is an asynchronous program designed to generate and s
 
 - Handles specific error cases, such as "No valid frame generated" and Weaviate insertion failures, with appropriate logging.
 
----
 
-**Note**: The script is designed to be run asynchronously and requires proper setup of the LLaMA model and Weaviate schema. It includes error handling but may need additional checks for robustness.
