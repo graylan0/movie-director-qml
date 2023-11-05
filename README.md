@@ -2,6 +2,9 @@
 
 The provided Python script is an asynchronous program designed to generate and store a sequence of creative text outputs, referred to as "movie frames," using a LLaMA model. It interacts with a SQLite database and a Weaviate instance for data storage. Here's a summary with markdown formatting for clarity:
 
+# Demo : ![image](https://github.com/graylan0/movie-director-qml/assets/34530588/0ca86730-f473-4234-a807-4f7baa03f230)
+
+
 ### Script Overview
 
 **Purpose**: To create a movie script based on a given topic by generating and summarizing text frames.
