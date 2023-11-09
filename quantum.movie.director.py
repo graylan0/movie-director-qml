@@ -23,9 +23,37 @@ executor = ThreadPoolExecutor(max_workers=3)
 
 # Initialize the Weaviate client
 client = weaviate.Client(
-    url="https://tacoai-9pf21pxx.weaviate.network",
+    url="https://urlhereforvectordbserver/",
 )
-
+# Function to retrieve movie frames based on a theme from Weaviate
+async def retrieve_movie_frames_by_theme(theme):
+    # Construct the GraphQL query for Weaviate
+    query = {
+        "query": {
+            "nearText": {
+                "concepts": [theme],
+                "certainty": 0.7
+            }
+        }
+    }
+    
+    # Execute the query using the Weaviate client
+    try:
+        result = await client.query.get("MovieFrame", ["frame_text", "summary"]).with_near_text({
+            "concepts": [theme],
+            "certainty": 0.7
+        }).do()
+        
+        # Check if the result contains data
+        if 'data' in result and 'Get' in result['data'] and 'MovieFrame' in result['data']['Get']:
+            frames = result['data']['Get']['MovieFrame']
+            return frames
+        else:
+            logger.error("No frames found for the given theme.")
+            return []
+    except Exception as e:
+        logger.error(f"An error occurred while retrieving movie frames: {e}")
+        return []
 # Database initialization function
 async def initialize_db():
     async with aiosqlite.connect("movie_frames.db") as db:
@@ -41,16 +69,9 @@ async def initialize_db():
 # Function to insert data into the SQLite database
 async def insert_into_db(frame_num, frame_text, summary):
     async with aiosqlite.connect("movie_frames.db") as db:
-        try:
-            await db.execute("INSERT INTO POOLDATA (frame_num, frame_text, summary) VALUES (?, ?, ?)",
-                             (frame_num, frame_text, summary))
-            await db.commit()
-        except aiosqlite.IntegrityError as e:
-            if 'UNIQUE constraint failed' in str(e):
-                logger.warning(f"Frame number {frame_num} already exists. Skipping insert.")
-            else:
-                raise
-
+        await db.execute("INSERT INTO POOLDATA (frame_num, frame_text, summary) VALUES (?, ?, ?)",
+                         (frame_num, frame_text, summary))
+        await db.commit()
 
 # Function to generate and summarize a movie frame
 async def generate_and_summarize_frame(last_frame, frame_num, frames):
@@ -85,33 +106,18 @@ async def generate_and_summarize_frame(last_frame, frame_num, frames):
         logger.error(f"Failed to generate frame {frame_num}: {e}")
         return None
     
-# Assuming that the Weaviate client has been initialized and the schema has been set up as shown previously.
-
-async def insert_into_weaviate(movie_frame):
+async def insert_into_weaviate(frame_num, frame_text, summary, quantum_cookie, commands):
+    data_object = {
+        "frame_num": frame_num,
+        "frame_text": frame_text,
+        "summary": summary,
+        "quantum_cookie": quantum_cookie,
+        "commands": commands
+    }
     try:
-        # Construct the data object for Weaviate according to the defined schema.
-        weaviate_object = {
-            "frame_text": movie_frame["frame_text"],
-            "summary": movie_frame["summary"]
-        }
-        
-        # Insert the object into Weaviate.
-        # The vectorization happens automatically based on the class schema.
-        # The 'class_name' parameter is required for the 'create' method.
-        # Run the synchronous create method in the executor.
-        await loop.run_in_executor(
-            executor, 
-            client.data_object.create,
-            weaviate_object, 
-            "MovieFrame",
-            None  # UUID can be None to let Weaviate generate it, or you can provide one.
-        )
-        
-        logger.info(f"Successfully inserted movie frame into Weaviate: {movie_frame}")
+        await client.data_object.create(data_object, class_name="MovieFrame")
     except Exception as e:
-        logger.error(f"Failed to insert data into Weaviate: {e}")
-
-
+        print(f"Failed to insert data into Weaviate: {e}")
 
 # Main function to start generating the movie
 async def start_movie(topic):
@@ -133,16 +139,16 @@ async def start_movie(topic):
                         {
                             "name": "frame_text",
                             "dataType": ["text"],
-                            "vectorizer": "text2vec-transformers"
+                            "vectorizer": "text2vec-contextionary"
                         },
                         {
                             "name": "summary",
                             "dataType": ["text"],
-                            "vectorizer": "text2vec-transformers"
+                            "vectorizer": "text2vec-contextionary"
                         }
                     ],
                     "vectorIndexType": "hnsw",
-                    "vectorizer": "text2vec-transformers"
+                    "vectorizer": "text2vec-contextionary"
                 }
             )
     except weaviate.exceptions.SchemaValidationException as e:
@@ -175,7 +181,7 @@ async def start_movie(topic):
     frames = {"0": initial_prompt}
     last_frame = initial_prompt
 
-    for i in range(1, 100):
+    for i in range(1, 10):
         frame_num = i * 10
         last_frame = await generate_and_summarize_frame(last_frame, frame_num, frames)
 
