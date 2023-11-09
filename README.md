@@ -4,6 +4,8 @@ The provided Python script is an asynchronous program designed to generate and s
 
 # Demo : ![image](https://github.com/graylan0/movie-director-qml/assets/34530588/0ca86730-f473-4234-a807-4f7baa03f230)
 
+![image](https://github.com/graylan0/movie-director-qml/assets/34530588/db925f13-1e8e-448f-bf86-538973b605d8)
+
 
 ### Script Overview
 
